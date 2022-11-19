@@ -77,6 +77,19 @@ export class UploadFilesService {
 </nav>
 ```
 
+## HTML de About
+
+```HTML
+<div class="jumbotron jumbotron-fluid animated fadeIn fast">
+
+    <div class="container">
+        <h1 class="display-3">Te Sirvo App</h1>
+        <p class="lead">Esta es una aplicación donde puedes consultar servicios ofertados.</p>
+    </div>
+
+</div>
+```
+
 ## Las Rutas
 
 ```JavaScript
