@@ -386,6 +386,159 @@ export class UsuariosComponent implements OnInit {
     </div>
 </div>
 ```
+## Controlador Componente Tarjeta de Usuario (usuario-tarjeta)
+
+usuario-tarjeta.component.ts:
+
+```JavaScript
+import { Component, OnInit } from '@angular/core';
+import { Input, Output, EventEmitter } from '@angular/core';
+import { Router } from '@angular/router'; 
+import { GLOBAL } from '../../services/global';
+@Component({
+  selector: 'app-usuario-tarjeta',
+  templateUrl: './usuario-tarjeta.component.html',
+  styles: [
+  ]
+})
+export class UsuarioTarjetaComponent implements OnInit {
+  @Input() usuario: any = {};
+  @Input() index: number | undefined;
+  @Output() usuarioSeleccionado: EventEmitter<number>;
+  public url_files: String
+  constructor(private router: Router) { 
+    this.url_files = GLOBAL.url_files;
+    this.usuarioSeleccionado = new EventEmitter();
+  }
+
+  ngOnInit(): void {
+     
+  }
+  verUsuario() {
+    // console.log(  this.index );
+    this.router.navigate( ['/usuario', this.usuario.username] );
+    // this.usuarioSeleccionado.emit( this.index );
+  }
+
+}
+```
+
+## Vista Componente Tarjeta de Usuario (usuario-tarjeta)
+
+usuario-tarjeta.component.html:
+```HTML
+<div class="col">
+    <div class="card">
+        <img class="card-img-top" [src]="url_files+usuario.urlFoto" [alt]="usuario.nombreCompleto">
+        <div class="card-body">
+            <h5 class="card-title">{{ usuario.nombreCompleto }}</h5>
+            <p class="card-text"> {{ usuario.profesion}} </p>
+            <p class="card-text"><small class="text-muted">{{usuario.descripcionServicio }}</small></p>
+            <button (click)="verUsuario()" type="button" class="btn btn-outline-primary btn-block">
+            Ver más...
+            </button>
+            <!-- <a [routerLink]="['/heroe',i]" class="btn btn-outline-primary">Ver más link...</a> -->
+        </div>
+    </div>
+</div>
+```
+
+## Controlador Componente Usuario
+
+```JavaScript
+import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router'
+import { UsuarioService } from '../../services/usuario.service';
+
+import { GLOBAL } from '../../services/global';
+@Component({
+  selector: 'app-usuario',
+  templateUrl: './usuario.component.html',
+  styles: [
+  ]
+})
+export class UsuarioComponent implements OnInit {
+
+  usuario:any = {};
+  public url_files: String
+  constructor(private activatedRoute: ActivatedRoute,
+    private _usuarioService: UsuarioService) {
+      this.url_files = GLOBAL.url_files;
+     }
+
+  ngOnInit(): void {
+    this.cargarUsuario()
+  }
+  cargarUsuario(): void{
+    this.activatedRoute.params.subscribe(params => {
+      let id = params['id']
+      console.log(params)
+      if(id){
+        this._usuarioService.getUsuario(id).subscribe( (usuario) => this.usuario = usuario)
+      }
+    })
+  }
+
+}
+```
+
+## Vista Componente Usuario
+
+```HTML
+<h1 class="animated fadeIn">{{ usuario.nombreCompleto | uppercase }}</h1>
+<hr>
+<div class="row animated fadeIn fast">
+    <div class="col-md-4">
+        <img width="300px" height="350px" [src]="url_files+usuario.urlFoto" class="img-fluid" [alt]="usuario.nombreCompleto">
+        <br><br>
+        <br><br>
+        <a [routerLink]="['/home']" class="btn btn-outline-danger btn-block">Regresar</a>
+    </div>
+    <div class="col-md-8">
+        <h3>{{ usuario.profesion }}</h3>
+        <hr>
+        <p>
+            {{ usuario.descripcionServicio }}
+        </p>
+    </div>
+</div>
+```
+## Controlador Componente Home
+
+```JavaScript
+import { Component, OnInit } from '@angular/core';
+import { UsuarioService } from '../../services/usuario.service';
+import { Usuario } from '../../models/usuario';
+import { Router } from '@angular/router';
+
+@Component({
+  selector: 'app-home',
+  templateUrl: './home.component.html',
+  styleUrls: ['./home.component.css']
+})
+export class HomeComponent implements OnInit {
+  usuarios:Usuario[] = [];
+  constructor(private _usuarioService:UsuarioService,
+    private router:Router) { }
+
+  ngOnInit(): void {
+    this._usuarioService.listarUsuarios().subscribe(data => (this.usuarios=data));
+  }
+  verUsuario( idx:number ){
+    this.router.navigate( ['../usuario',idx] );  
+  }
+
+}
+```
+## Controlador Componente Home
+
+```HTML
+<h1>Usuarios <small>Servicios vários a tu alcance</small></h1>
+<hr>
+<div class="row row-cols-1 row-cols-md-3 g-4">
+    <app-usuario-tarjeta (usuarioSeleccionado)="verUsuario( $event )" [usuario]="foo" [index]="i" *ngFor="let foo of usuarios; let i = index"></app-usuario-tarjeta>
+</div>
+```
 
 Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory. Use the `-prod` flag for a production build.
 
