@@ -530,7 +530,7 @@ export class HomeComponent implements OnInit {
 
 }
 ```
-## Controlador Componente Home
+## Vista Componente Home
 
 ```HTML
 <h1>Usuarios <small>Servicios vários a tu alcance</small></h1>
