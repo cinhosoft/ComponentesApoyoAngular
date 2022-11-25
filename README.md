@@ -1,24 +1,23 @@
-# ClientesApp
+# TeSirvoApp
 
 This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 1.6.0.
 
 ## Servicio UploadFiles
 
 ```JavaScript
+import { HttpClient, HttpEvent, HttpRequest } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpRequest, HttpEvent,HttpParams} from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { GLOBAL } from './global';
+
 @Injectable({
   providedIn: 'root'
 })
 export class UploadFilesService {
   public url: String
   constructor(private _http: HttpClient){
-    this.url = GLOBAL.ulr;
-   
+    this.url = GLOBAL.url;
   }
-
   //Metodo que envia los archivos al endpoint /upload 
   upload(file: File): Observable<HttpEvent<any>>{
     const formData: FormData = new FormData();
@@ -106,48 +105,61 @@ const routes: Routes = [
 ## El Controllador form.component.ts
 
 ``` JavaScript
-import { Component, OnInit } from '@angular/core';
-import {Router, ActivatedRoute} from '@angular/router'
-
-import { Usuario } from '../../../models/usuario'
-import { UsuarioService } from '../../../services/usuario.service'
-import { UploadFilesService } from '../../../services/upload-files.service'
 import { HttpEventType, HttpResponse } from '@angular/common/http';
+import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Observable } from 'rxjs';
+import { Usuario } from 'src/app/models/usuario';
+import { UploadFilesService } from 'src/app/services/upload-files.service';
+import { UsuarioService } from 'src/app/services/usuario.service';
+import swal from 'sweetalert2';
+
 @Component({
-  selector: 'app-form',
-  templateUrl: './form.component.html',
+  selector: 'app-usuario-form',
+  templateUrl: './usuario-form.component.html',
   styles: [
-  ],
-  providers: [UsuarioService]
+  ]
 })
-export class FormComponent implements OnInit {
-  public usuario: Usuario =  new Usuario('','','','','','')
-  public titulo:string = "Crear Usuario"
-  public mensaje:String="";
+export class UsuarioFormComponent implements OnInit {
+
+  public usuario:Usuario = new Usuario('','','','','','',null);
+  public titulo:string="Crear Usuario";
+  public mensaje:string="";
   public files:any;
-  message = '';
-  fileName = "";
-  clave_encriptada = "";
+  message="";
+  fileName="";
+  clave_encriptada="";
   fileInfos:Observable<any> | undefined;
+
   constructor(
-    private usuarioService: UsuarioService,
-    private uploadFilesService: UploadFilesService,
-    private router: Router,
-    private activatedRoute: ActivatedRoute) { }
+    private usuarioService:UsuarioService,
+    private uploadFilesService:UploadFilesService,
+    private router:Router,
+    private activatedRoute:ActivatedRoute) { }
 
   ngOnInit(): void {
-    this.cargarUsuario()
+    this.cargarUsuario();
   }
-  selectFiles(event:any) {
-    //this.progressInfo = [];
-    event.target.files.length == 1 ? this.fileName = event.target.files[0].name : this.fileName = event.target.files.length + " archivos";
-    this.files = event.target.files;
+
+  cargarUsuario(): void{
+    this.activatedRoute.params.subscribe(params => {
+      let id = params['id']
+      console.log(params)
+      if(id){
+        this.usuarioService.getUsuario(id).subscribe( (usuario) => this.usuario = usuario)
+        this.clave_encriptada = this.usuario.password;
+      }
+    })
   }
-  uploadFiles() {
-    this.message = '';
-    this.upload(0, this.files[0]);
+  selectFiles(event:any){
+    event.target.files.length==1 ? this.fileName=event.target.files[0].name:this.fileName=event.target.files.length + "archivos";
+    this.files = event.target.files
+  }
+  uploadFiles(){
+    this.message="";
+    this.upload(0,this.files[0]);
    }
+
    upload(index:number, file:any) {
     //this.progressInfo[index] = { value: 0, fileName: file.name };
 
@@ -172,49 +184,32 @@ export class FormComponent implements OnInit {
         this.message = 'No se puede subir el archivo ' + file.name;
       });
   }
-
-  cargarUsuario(): void{
-    this.activatedRoute.params.subscribe(params => {
-      let id = params['id']
-      console.log(params)
-      if(id){
-        this.usuarioService.getUsuario(id).subscribe( (usuario) => this.usuario = usuario)
-        this.clave_encriptada = this.usuario.password;
-      }
-    })
-  }
-
-  create(formRegister:any): void {
+  create(formRegister:any):void{
     console.log(this.usuario);
     this.usuarioService.register(this.usuario).subscribe({
-      next: (data) => {
-        if(data){
-          console.log(data)
-          this.mensaje ="El Registro se Ha Realizado Correctamente...";
-          this.usuario = new Usuario('','','','','','')
-          alert(this.mensaje);
-          formRegister.reset()
-          this.router.navigate(['../usuarios'])
-        }else{
-         this.mensaje ="Error al Registrar Usuario";
-       
-        }
-        console.log(this.mensaje);
-        
-      },
-      error: (error) =>{
-        console.log(<any>error);
-      },
-      complete: () => console.info('complete') 
-    });
-  }
-
-  update():void{
-    this.usuarioService.update(this.usuario)
-    .subscribe( usuario => {
+   next: (data) => {
+    if(data){
+      console.log(data)
+      this.mensaje ="El Registro se ha realizado correctametne...";
+      this.usuario = new Usuario('','','','','','',null);
+      swal.fire("Usuario Registrado",this.mensaje,'success');
+      formRegister.reset();
       this.router.navigate(['../usuarios'])
-      alert(`Usuario ${this.usuario.nombreCompleto} actualizado con éxito!`)
-      //swal('Cliente Actualizado', `Cliente ${cliente.nombre} actualizado con éxito!`, 'success')
+     }else{
+      this.mensaje = "Error al Registrar Usuario";
+     }
+   },
+   error: (error)=>{
+    console.log(<any>error);
+   },
+   complete: ()=>{console.info('Proceso Terminado')}
+   });
+   }
+
+   update():void{
+    this.usuarioService.update(this.usuario).subscribe( usuario => {
+      this.router.navigate(['../usuarios'])
+      swal.fire('Usuario Actualizado', `Usuario ${usuario.nombreCompleto} actualizado con éxito!`, 'success')
     }
     )
   }
@@ -293,9 +288,10 @@ export class FormComponent implements OnInit {
 
 ```JavaScript
 import { Component, OnInit } from '@angular/core';
-import { Usuario } from '../../models/usuario';
+import { Usuario } from '../../models/usuario'
 import { UsuarioService } from '../../services/usuario.service';
 import swal from 'sweetalert2'
+
 @Component({
   selector: 'app-usuarios',
   templateUrl: './usuarios.component.html',
@@ -303,29 +299,29 @@ import swal from 'sweetalert2'
   ]
 })
 export class UsuariosComponent implements OnInit {
-
   public usuarios:Usuario[]=[];
-  constructor(
-    private _usuarioService: UsuarioService ) { }
+
+  constructor(private _usuarioService: UsuarioService) { }
 
   ngOnInit(): void {
     //if(!this._usuarioService.esAutenticado()){
     //  this._router.navigate(['login']);
     //}else{
-      this._usuarioService.listarUsuarios().subscribe(data => (this.usuarios=data));
+      this._usuarioService.listasUsuarios().subscribe(data => (this.usuarios=data));
     //}
   }
-  eliminar(usuario: Usuario): void {
 
+  eliminar(usuario: Usuario): void {
+     
     swal.fire({
       title: 'Está seguro?',
       text:`¿Seguro que desea eliminar al cliente ${usuario.nombreCompleto} ?`,
-      icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#3085d6',
       cancelButtonColor: '#d33',
       confirmButtonText: 'Si, eliminar!',
       cancelButtonText: 'No, cancelar!',
+      //icon: 'warning',
       reverseButtons: true
     }).then((result:any) => {
       if (result.value) { 
@@ -342,7 +338,6 @@ export class UsuariosComponent implements OnInit {
 
       }
     })
-     
   }
 
 }
@@ -393,8 +388,8 @@ usuario-tarjeta.component.ts:
 ```JavaScript
 import { Component, OnInit } from '@angular/core';
 import { Input, Output, EventEmitter } from '@angular/core';
-import { Router } from '@angular/router'; 
-import { GLOBAL } from '../../services/global';
+import { Router } from '@angular/router';  
+import { GLOBAL } from '../../../services/global';
 @Component({
   selector: 'app-usuario-tarjeta',
   templateUrl: './usuario-tarjeta.component.html',
@@ -402,25 +397,27 @@ import { GLOBAL } from '../../services/global';
   ]
 })
 export class UsuarioTarjetaComponent implements OnInit {
-  @Input() usuario: any = {};
+  @Input() usuario: any = {};//Recibir Datos de un Componente
   @Input() index: number | undefined;
-  @Output() usuarioSeleccionado: EventEmitter<number>;
-  public url_files: String
+  @Output() usuarioSeleccionado: EventEmitter<number>;//Enviar Datos a Otro Componente
+  public url_files: String;
+
   constructor(private router: Router) { 
     this.url_files = GLOBAL.url_files;
     this.usuarioSeleccionado = new EventEmitter();
   }
 
   ngOnInit(): void {
-     
   }
+  
   verUsuario() {
     // console.log(  this.index );
     this.router.navigate( ['/usuario', this.usuario.username] );
     // this.usuarioSeleccionado.emit( this.index );
   }
 
-}
+} 
+
 ```
 
 ## Vista Componente Tarjeta de Usuario (usuario-tarjeta)
@@ -448,9 +445,9 @@ usuario-tarjeta.component.html:
 ```JavaScript
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router'
-import { UsuarioService } from '../../services/usuario.service';
+import { UsuarioService } from '../../../services/usuario.service';
+import { GLOBAL } from '../../../services/global';
 
-import { GLOBAL } from '../../services/global';
 @Component({
   selector: 'app-usuario',
   templateUrl: './usuario.component.html',
@@ -459,16 +456,17 @@ import { GLOBAL } from '../../services/global';
 })
 export class UsuarioComponent implements OnInit {
 
-  usuario:any = {};
+  public usuario:any = {};
   public url_files: String
   constructor(private activatedRoute: ActivatedRoute,
     private _usuarioService: UsuarioService) {
       this.url_files = GLOBAL.url_files;
-     }
+    }
 
   ngOnInit(): void {
-    this.cargarUsuario()
+    this.cargarUsuario();
   }
+
   cargarUsuario(): void{
     this.activatedRoute.params.subscribe(params => {
       let id = params['id']
@@ -480,6 +478,7 @@ export class UsuarioComponent implements OnInit {
   }
 
 }
+
 ```
 
 ## Vista Componente Usuario
@@ -513,8 +512,7 @@ import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-home',
-  templateUrl: './home.component.html',
-  styleUrls: ['./home.component.css']
+  templateUrl: './home.component.html'
 })
 export class HomeComponent implements OnInit {
   usuarios:Usuario[] = [];
@@ -522,13 +520,14 @@ export class HomeComponent implements OnInit {
     private router:Router) { }
 
   ngOnInit(): void {
-    this._usuarioService.listarUsuarios().subscribe(data => (this.usuarios=data));
+    this._usuarioService.listasUsuarios().subscribe(data => (this.usuarios=data));
   }
   verUsuario( idx:number ){
     this.router.navigate( ['../usuario',idx] );  
   }
 
 }
+
 ```
 ## Vista Componente Home
 
@@ -539,4 +538,40 @@ export class HomeComponent implements OnInit {
     <app-usuario-tarjeta (usuarioSeleccionado)="verUsuario( $event )" [usuario]="foo" [index]="i" *ngFor="let foo of usuarios; let i = index"></app-usuario-tarjeta>
 </div>
 ```
+## Controlador del Componente Login
+
+Vamos a iniciar codificando el controlador:
+
+```JavaScript
+
+```
+
+
+## Vista Componente Login
+
+Vamos a utilizar esta maqueta para el formulario login
+```HTML
+<h1 class="login-header">{{title}}</h1>
+<div class="container">
+    <div class="login">
+        <div class="login-triangle"></div>
+>
+        <h2 class="login-header" center>Login</h2>
+         <form  #formLogin="ngForm" class="login-container" (ngSubmit)="onLogin()">
+            <p>
+                <input type="text" name="username" #username="ngModel" [(ngModel)]="usuario.username"  placeholder="Nombre Usuario" ngModel required>
+                <span *ngIf="!username.valid && username.touched">El Nombre de Usuario Es Obligatorio</span>
+            </p>
+            <p>
+                <input type="password" name="password" #password="ngModel" [(ngModel)]="usuario.password"  placeholder="Password " ngModel required>
+                <span *ngIf="!password.valid && password.touched">La Contraseña Es Obligatoria</span>
+            </p>
+            <input type="submit" value="Ingresar">
+          </form> 
+    </div>
+</div>
+```
+
+
+
 
