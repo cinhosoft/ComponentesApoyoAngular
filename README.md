@@ -543,34 +543,176 @@ export class HomeComponent implements OnInit {
 Vamos a iniciar codificando el controlador:
 
 ```JavaScript
+import { Component, OnInit } from '@angular/core';
+import { Router, ActivatedRoute, Params} from '@angular/router';
+import { Usuario } from 'src/app/models/usuario';
+import { UsuarioService } from '../../../services/usuario.service';
+import swal from 'sweetalert2';
+@Component({
+  selector: 'app-login',
+  templateUrl: './login.component.html',
+  styleUrls: ['./login.component.css']
+})
+export class LoginComponent implements OnInit {
+  public title: String;
+  public usuario:Usuario; 
+  constructor(
+    private _route: ActivatedRoute,
+    private _router: Router,
+    private _usuarioService: UsuarioService) { 
+      this.title = "Iniciar Sesión";
+      this.usuario = new Usuario('','','','','','')
+    }
 
+  ngOnInit(): void {
+    if(this._usuarioService.esAutenticado()){
+      this._router.navigate(['home']);
+    }else{
+      this._router.navigate(['login']);
+    }
+  }
+
+  onLogin():void{
+    if(this.usuario.username == '' || this.usuario.password == ''){
+      console.log("Error No digito datos");
+      swal.fire('Error!', 'Error No digito datos completos' , 'error');
+    }else{
+      this._usuarioService.login(this.usuario.username, this.usuario.password).subscribe({
+        next: (response)=>{
+          this._usuarioService.guardarToken(response.token);
+          this._usuarioService.guardarUsuario(response.idUsuario,response.nombreUsuario);
+          this._router.navigate(['home'])
+          swal.fire('Login!', 'Hola: ' + response.nombreUsuario  + ', ha iniciado correctamente' , 'success');
+        },error: (error)=> {
+          if(error.status == 401){
+            swal.fire('Error Login!', 'Datos Digitados Son Incorrectos' , 'error');
+          }
+        }
+      });
+    }
+ }
+}
 ```
 
+## Vista CSS Login
 
-## Vista Componente Login
+```CSS
+html,
+body {
+    height: 100%;
+}
+
+body {
+    display: flex;
+    align-items: center;
+    padding-top: 40px;
+    padding-bottom: 40px;
+    background-color: #f5f5f5;
+}
+
+.form-signin {
+    max-width: 330px;
+    padding: 15px;
+}
+
+.form-signin .form-floating:focus-within {
+    z-index: 2;
+}
+
+.form-signin input[type="email"] {
+    margin-bottom: -1px;
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.form-signin input[type="password"] {
+    margin-bottom: 10px;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+```
+## Vista HTML Login
 
 Vamos a utilizar esta maqueta para el formulario login
 ```HTML
-<h1 class="login-header">{{title}}</h1>
-<div class="container">
-    <div class="login">
-        <div class="login-triangle"></div>
->
-        <h2 class="login-header" center>Login</h2>
-         <form  #formLogin="ngForm" class="login-container" (ngSubmit)="onLogin()">
-            <p>
-                <input type="text" name="username" #username="ngModel" [(ngModel)]="usuario.username"  placeholder="Nombre Usuario" ngModel required>
-                <span *ngIf="!username.valid && username.touched">El Nombre de Usuario Es Obligatorio</span>
-            </p>
-            <p>
-                <input type="password" name="password" #password="ngModel" [(ngModel)]="usuario.password"  placeholder="Password " ngModel required>
-                <span *ngIf="!password.valid && password.touched">La Contraseña Es Obligatoria</span>
-            </p>
-            <input type="submit" value="Ingresar">
-          </form> 
-    </div>
-</div>
+<main class="form-signin w-100 m-auto">
+    <form #formLogin="ngForm" class="login-container" (ngSubmit)="onLogin()">
+        <br><br><br>
+        <h1 class="h3 mb-3 fw-normal">{{title}}</h1>
+        <div class="form-floating">
+            <input type="text" name="username" #username="ngModel" [(ngModel)]="usuario.username" class="form-control" id="floatingInput" placeholder="Username" ngModel required>
+            <label for="floatingInput">Username</label>
+            <span *ngIf="!username.valid && username.touched">El Nombre de Usuario Es Obligatorio</span>
+        </div>
+        <div class="form-floating">
+            <input type="password" name="password" #password="ngModel" [(ngModel)]="usuario.password" class="form-control" id="floatingPassword" placeholder="Password" ngModel required>
+            <label for="floatingPassword">Password</label>
+            <span *ngIf="!password.valid && password.touched">La Contraseña Es Obligatoria</span>
+        </div>
+        <button class="w-100 btn btn-lg btn-primary" type="submit">Ingresar</button>
+    </form>
+</main>
 ```
+
+## NavBar con Autenticacion
+
+Uso del metodo esAutenticado() y se agregan los botones de Login y Logout:
+
+```HTML
+<nav class="navbar navbar-expand-md navbar-dark bg-dark bg-faded">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="#">
+            <img src="assets/img/logo.png" alt="LOGO UNAB" width="30" height="24">
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link active" aria-current="page" routerLink="home" routerLinkActive="active" href="#">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" *ngIf="_usuarioService.esAutenticado()" routerLink="usuarios" routerLinkActive="active">Administrador de Usuarios</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" routerLink="about" routerLinkActive="active">About</a>
+                </li>
+                <li *ngIf="!_usuarioService.esAutenticado()"><a class="nav-link" [routerLink]="['../usuarios/form']" routerLinkActive="active">Registrar</a> </li>
+
+                <li class="nav-item" style="float:right" *ngIf="!_usuarioService.esAutenticado()">
+                    <a style="float:right" class="nav-link" routerLink="login" routerLinkActive="active">Login</a>
+                </li>
+
+                <li class="nav-item" style="float:right" *ngIf="_usuarioService.esAutenticado()">
+                    <a style="float:right" class="nav-link" (click)="logout()" routerLinkActive="active">Logout</a>
+                </li>
+
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                      Dropdown
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+                        <li><a class="dropdown-item" href="#">Action</a></li>
+                        <li><a class="dropdown-item" href="#">Another action</a></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><a class="dropdown-item" href="#">Something else here</a></li>
+                    </ul>
+                </li>
+
+            </ul>
+            <form class="d-flex" role="search">
+                <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search">
+                <button class="btn btn-outline-success" type="submit">Search</button>
+            </form>
+        </div>
+    </div>
+</nav>
+```
+
+## NavBar con Autenticacion
 
 
 
